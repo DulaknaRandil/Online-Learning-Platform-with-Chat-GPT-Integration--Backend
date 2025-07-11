@@ -125,10 +125,7 @@ class App {
       });
     });
 
-    // API routes
-    this.app.use('/api', routes);
-
-    // API documentation endpoint
+    // API documentation endpoint (must come before mounting routes)
     this.app.get('/api', (req, res) => {
       res.json({
         success: true,
@@ -140,9 +137,23 @@ class App {
           courses: '/api/courses',
           enrollments: '/api/enrollments',
           recommendations: '/api/recommendations',
-          users: '/api/users'
+          users: '/api/users',
+          admin: '/api/admin',
+          payment: '/api/payment'
         },
         documentation: config.API_URL + '/api-docs' || 'https://api-docs.example.com'
+      });
+    });
+
+    // Mount API routes
+    this.app.use('/api', routes);
+
+    // Test route for debugging
+    this.app.get('/test', (req, res) => {
+      res.json({
+        success: true,
+        message: 'Test route working',
+        timestamp: new Date().toISOString()
       });
     });
   }
