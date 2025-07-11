@@ -19,6 +19,19 @@ class App {
     this.initializeMiddleware();
     this.initializeRoutes();
     this.initializeErrorHandling();
+    
+    // Initialize database connection for serverless environments
+    this.initializeDatabase();
+  }
+
+  async initializeDatabase() {
+    try {
+      await connectDB();
+      logger.info('✅ Database connection established');
+    } catch (error) {
+      logger.warn('⚠️  Database connection failed');
+      logger.warn('Database error:', error.message);
+    }
   }
 
   initializeMiddleware() {
@@ -35,7 +48,7 @@ class App {
     }));
 
     // CORS configuration
-    console.log('CORS Origin:', config.CORS_ORIGIN);
+    logger.info('CORS Origin:', config.CORS_ORIGIN);
     this.app.use(cors({
       origin: '*', // Allow all origins for simplicity during development
       credentials: true, // Changed back to true for proper cookie handling
@@ -120,15 +133,6 @@ class App {
 
   async start() {
     try {
-      // Try to connect to database
-      try {
-        await connectDB();
-        logger.info('✅ Database connection established');
-      } catch (error) {
-        logger.warn('⚠️  Database connection failed, starting without database');
-        logger.warn('Database error:', error.message);
-      }
-
       const PORT = config.PORT;
       
       this.server = this.app.listen(PORT, () => {

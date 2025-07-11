@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Learning Platform API</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .api-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .endpoint {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .status {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Online Learning Platform API</h1>
+        <p class="status">✅ API is running successfully!</p>
+        
+        <div class="api-info">
+            <h3>Available Endpoints:</h3>
+            <div class="endpoint">GET /api/health - Health check</div>
+            <div class="endpoint">POST /api/auth/login - User login</div>
+            <div class="endpoint">POST /api/auth/register - User registration</div>
+            <div class="endpoint">GET /api/courses - Get all courses</div>
+            <div class="endpoint">POST /api/courses - Create a course</div>
+            <div class="endpoint">GET /api/users/profile - Get user profile</div>
+            <div class="endpoint">POST /api/enrollments - Enroll in a course</div>
+        </div>
+        
+        <p><strong>Note:</strong> This is the backend API. Use the appropriate HTTP methods and authentication headers to interact with the endpoints.</p>
+        
+        <p>For API documentation and testing, please refer to the project repository or use tools like Postman.</p>
+    </div>
+</body>
+</html>

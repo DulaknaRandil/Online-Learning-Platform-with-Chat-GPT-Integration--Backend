@@ -12,15 +12,16 @@ process.on('warning', (warning) => {
 
 const App = require('./src/app');
 
-// Create and start the application
-const app = new App();
+// Create the application instance
+const appInstance = new App();
 
-// Start the server
+// For Vercel deployment, export the Express app directly
+module.exports = appInstance.app;
+
+// Start the server only if this file is run directly (not when imported)
 if (require.main === module) {
-  app.start().catch((error) => {
+  appInstance.start().catch((error) => {
     console.error('Failed to start application:', error);
     process.exit(1);
   });
 }
-
-module.exports = app;
