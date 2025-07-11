@@ -20,54 +20,64 @@ class App {
     this.initializeRoutes();
     this.initializeErrorHandling();
     
-    // Initialize database connection for serverless environments
-    this.initializeDatabase();
+    // Initialize database connection for serverless environments (non-blocking)
+    this.initializeDatabase().catch(error => {
+      logger.error('Database initialization failed:', error.message);
+      // Don't crash the app, just log the error
+    });
   }
 
   async initializeDatabase() {
     try {
-      await connectDB();
+      // Add a timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Database connection timeout')), 10000);
+      });
+      
+      await Promise.race([connectDB(), timeoutPromise]);
       logger.info('✅ Database connection established');
     } catch (error) {
       logger.warn('⚠️  Database connection failed');
       logger.warn('Database error:', error.message);
+      // Don't throw the error, just log it
     }
   }
 
   initializeMiddleware() {
-    // Security middleware
-    this.app.use(helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", 'data:', 'https:'],
+    try {
+      // Security middleware
+      this.app.use(helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", 'data:', 'https:'],
+          },
         },
-      },
-    }));
-
-    // CORS configuration
-    logger.info('CORS Origin:', config.CORS_ORIGIN);
-    this.app.use(cors({
-      origin: '*', // Allow all origins for simplicity during development
-      credentials: true, // Changed back to true for proper cookie handling
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-      exposedHeaders: ['Content-Length', 'X-Requested-With', 'Authorization']
-    }));
-
-    // Rate limiting
-    this.app.use(generalLimiter);
-
-    // Logging
-    if (config.NODE_ENV !== 'test') {
-      this.app.use(morgan('combined', {
-        stream: {
-          write: (message) => logger.info(message.trim())
-        }
       }));
-    }
+
+      // CORS configuration
+      logger.info('CORS Origin:', config.CORS_ORIGIN);
+      this.app.use(cors({
+        origin: '*', // Allow all origins for simplicity during development
+        credentials: true, // Changed back to true for proper cookie handling
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        exposedHeaders: ['Content-Length', 'X-Requested-With', 'Authorization']
+      }));
+
+      // Rate limiting
+      this.app.use(generalLimiter);
+
+      // Logging
+      if (config.NODE_ENV !== 'test') {
+        this.app.use(morgan('combined', {
+          stream: {
+            write: (message) => logger.info(message.trim())
+          }
+        }));
+      }
 
     // Body parser middleware
     this.app.use(express.json({ 
@@ -86,6 +96,10 @@ class App {
       req.requestTime = new Date().toISOString();
       next();
     });
+    } catch (error) {
+      logger.error('Failed to initialize middleware:', error);
+      throw error;
+    }
   }
 
   initializeRoutes() {
