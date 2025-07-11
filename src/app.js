@@ -15,16 +15,21 @@ const logger = require('./utils/logger');
 
 class App {
   constructor() {
-    this.app = express();
-    this.initializeMiddleware();
-    this.initializeRoutes();
-    this.initializeErrorHandling();
-    
-    // Initialize database connection for serverless environments (non-blocking)
-    this.initializeDatabase().catch(error => {
-      logger.error('Database initialization failed:', error.message);
-      // Don't crash the app, just log the error
-    });
+    try {
+      this.app = express();
+      this.initializeMiddleware();
+      this.initializeRoutes();
+      this.initializeErrorHandling();
+      
+      // Initialize database connection for serverless environments (non-blocking)
+      this.initializeDatabase().catch(error => {
+        logger.error('Database initialization failed:', error.message);
+        // Don't crash the app, just log the error
+      });
+    } catch (error) {
+      console.error('App constructor failed:', error);
+      throw error;
+    }
   }
 
   async initializeDatabase() {
@@ -153,8 +158,15 @@ class App {
       res.json({
         success: true,
         message: 'Test route working',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        vercel: process.env.VERCEL || 'false'
       });
+    });
+
+    // Simple ping endpoint
+    this.app.get('/ping', (req, res) => {
+      res.json({ success: true, message: 'pong', timestamp: new Date().toISOString() });
     });
   }
 
