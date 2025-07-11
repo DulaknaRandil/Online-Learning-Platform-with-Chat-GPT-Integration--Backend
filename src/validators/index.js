@@ -117,7 +117,9 @@ const commonSchemas = {
     order: Joi.string().valid('asc', 'desc').default('desc')
   }),
 
-  mongoId: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
+  mongoId: Joi.object({
+    id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required()
+  }),
 
   search: Joi.object({
     q: Joi.string().min(1).max(100),
@@ -126,6 +128,11 @@ const commonSchemas = {
     minPrice: Joi.number().min(0),
     maxPrice: Joi.number().min(0),
     instructor: Joi.string()
+  }),
+
+  // Schema for course publish/unpublish action
+  publishAction: Joi.object({
+    value: Joi.string().valid('toggle').required()
   })
 };
 

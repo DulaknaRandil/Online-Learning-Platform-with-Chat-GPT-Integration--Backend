@@ -146,7 +146,7 @@ class CourseService {
   }
 
   // Delete course
-  async deleteCourse(courseId, instructorId) {
+  async deleteCourse(courseId, userId, userRole = null) {
     try {
       const course = await Course.findById(courseId);
 
@@ -154,8 +154,8 @@ class CourseService {
         throw new Error(MESSAGES.ERROR.COURSE_NOT_FOUND);
       }
 
-      // Check if user is the instructor or admin
-      if (course.instructor.toString() !== instructorId) {
+      // Allow admins to delete any course, or instructors to delete their own courses
+      if (userRole !== 'admin' && course.instructor.toString() !== userId) {
         throw new Error(MESSAGES.ERROR.FORBIDDEN);
       }
 
@@ -167,8 +167,8 @@ class CourseService {
 
       await Course.findByIdAndDelete(courseId);
 
-      // Remove from instructor's created courses
-      await User.findByIdAndUpdate(instructorId, {
+      // Remove from instructor's created courses (only if the user is the original instructor)
+      await User.findByIdAndUpdate(course.instructor, {
         $pull: { createdCourses: courseId }
       });
 
@@ -220,7 +220,7 @@ class CourseService {
   }
 
   // Publish course
-  async publishCourse(courseId, instructorId) {
+  async publishCourse(courseId, userId, userRole = null) {
     try {
       const course = await Course.findById(courseId);
 
@@ -228,7 +228,8 @@ class CourseService {
         throw new Error(MESSAGES.ERROR.COURSE_NOT_FOUND);
       }
 
-      if (course.instructor.toString() !== instructorId) {
+      // Allow admins to toggle any course, or instructors to toggle their own courses
+      if (userRole !== 'admin' && course.instructor.toString() !== userId) {
         throw new Error(MESSAGES.ERROR.FORBIDDEN);
       }
 
@@ -237,10 +238,16 @@ class CourseService {
         throw new Error('Course must have at least one lesson to be published');
       }
 
-      course.status = COURSE_STATUS.PUBLISHED;
+      // Toggle the course status
+      if (course.status === COURSE_STATUS.PUBLISHED) {
+        course.status = COURSE_STATUS.DRAFT;
+      } else {
+        course.status = COURSE_STATUS.PUBLISHED;
+      }
+      
       await course.save();
 
-      logger.info(`Course published successfully: ${course.title}`);
+      logger.info(`Course status toggled to ${course.status}: ${course.title}`);
 
       return course;
     } catch (error) {

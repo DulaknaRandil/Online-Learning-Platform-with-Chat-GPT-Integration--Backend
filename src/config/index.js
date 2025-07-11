@@ -19,8 +19,15 @@ const config = {
   // OpenAI
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   
+  // Groq (fallback LLM)
+  GROQ_API_KEY: process.env.GROQ_API_KEY,
+  GROQ_MODEL: process.env.GROQ_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
+  
+  // Frontend URL
+  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
+  
   // CORS
-  CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  CORS_ORIGIN: process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:3000',
   
   // Rate limiting
   RATE_LIMIT_WINDOW: process.env.RATE_LIMIT_WINDOW || 15 * 60 * 1000, // 15 minutes
@@ -40,7 +47,6 @@ const config = {
   
   // URLs
   API_URL: process.env.API_URL || `http://localhost:${process.env.PORT || 5000}`,
-  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
 };
 
 // Validate required environment variables

@@ -16,7 +16,6 @@ router.post('/',
 );
 
 router.get('/my-enrollments',
-  isStudent,
   validate(commonSchemas.pagination, 'query'),
   enrollmentController.getUserEnrollments
 );

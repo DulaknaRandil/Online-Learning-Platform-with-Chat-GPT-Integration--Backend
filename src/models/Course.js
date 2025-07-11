@@ -218,6 +218,30 @@ courseSchema.virtual('lessonCount').get(function() {
   return this.lessons ? this.lessons.length : 0;
 });
 
+// Virtual field for level (alias for difficulty)
+courseSchema.virtual('level').get(function() {
+  return this.difficulty;
+});
+
+// Virtual field for frontend compatibility - provides rating object structure
+courseSchema.virtual('rating').get(function() {
+  return {
+    average: this.averageRating || 0,
+    count: this.totalRatings || 0
+  };
+});
+
+// Add level to toJSON to ensure it's included in responses
+courseSchema.set('toJSON', {
+  virtuals: true,
+  transform: function(doc, ret) {
+    if (!ret.level && ret.difficulty) {
+      ret.level = ret.difficulty;
+    }
+    return ret;
+  }
+});
+
 // Middleware to update duration when lessons are modified
 courseSchema.pre('save', function(next) {
   if (this.isModified('lessons')) {

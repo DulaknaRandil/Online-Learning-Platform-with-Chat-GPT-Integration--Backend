@@ -99,10 +99,10 @@ const requireRole = (roles) => (req, res, next) => {
 const isInstructor = requireRole([USER_ROLES.INSTRUCTOR, USER_ROLES.ADMIN]);
 
 // Check if user is admin
-const isAdmin = requireRole(USER_ROLES.ADMIN);
+const isAdmin = requireRole([USER_ROLES.ADMIN]);
 
 // Check if user is student
-const isStudent = requireRole(USER_ROLES.STUDENT);
+const isStudent = requireRole([USER_ROLES.STUDENT]);
 
 // Check if user is instructor or admin
 const isInstructorOrAdmin = requireRole([USER_ROLES.INSTRUCTOR, USER_ROLES.ADMIN]);

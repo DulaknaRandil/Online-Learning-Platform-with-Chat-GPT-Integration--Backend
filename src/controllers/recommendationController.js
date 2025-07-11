@@ -4,7 +4,6 @@ const courseService = require('../services/courseService');
 const { HTTP_STATUS } = require('../constants');
 const { successResponse, errorResponse } = require('../utils/response');
 const { asyncHandler } = require('../middleware');
-const logger = require('../utils/logger');
 
 class RecommendationController {
   // Get GPT-powered course recommendations
@@ -19,52 +18,65 @@ class RecommendationController {
       return errorResponse(res, 'Prompt is too long. Please keep it under 500 characters.', 400);
     }
 
-    // Get available courses to provide context
-    const coursesResponse = await courseService.getCourses({ status: 'published' });
-    const availableCourses = coursesResponse.data || [];
+    try {
+      // Get available courses to provide context
+      const coursesResponse = await courseService.getAllCourses({ status: 'published' });
+      const availableCourses = coursesResponse.courses || [];
 
-    // Get recommendations from GPT
-    const recommendations = await gptService.getCourseRecommendations(prompt, availableCourses);
+      // Get recommendations from GPT
+      const recommendations = await gptService.getCourseRecommendations(prompt, availableCourses);
 
-    // Match recommendations with actual courses
-    const matchedCourses = [];
+      // Match recommendations with actual courses
+      const matchedCourses = [];
     
-    if (recommendations.recommendations) {
-      for (const rec of recommendations.recommendations) {
-        if (rec.courseId) {
-          const course = availableCourses.find(c => c._id.toString() === rec.courseId);
-          if (course) {
-            matchedCourses.push({
-              ...course.toObject(),
-              recommendationReason: rec.reason,
-              priority: rec.priority
-            });
+      if (recommendations.recommendations) {
+        for (const rec of recommendations.recommendations) {
+          let course = null;
+          
+          // Try to find course by ID first
+          if (rec.courseId) {
+            course = availableCourses.find(c => c._id.toString() === rec.courseId);
           }
-        } else {
-          // If no specific course ID, try to find by title
-          const course = availableCourses.find(c => 
-            c.title.toLowerCase().includes(rec.title.toLowerCase()) ||
-            rec.title.toLowerCase().includes(c.title.toLowerCase())
-          );
+          
+          // If not found by ID, try to find by exact title match
+          if (!course && rec.courseId) {
+            course = availableCourses.find(c => 
+              c.title.toLowerCase() === rec.courseId.toLowerCase()
+            );
+          }
+          
+          // If still not found, try partial title matching
+          if (!course && (rec.title || rec.courseId)) {
+            const searchTitle = rec.title || rec.courseId;
+            course = availableCourses.find(c => 
+              c.title.toLowerCase().includes(searchTitle.toLowerCase()) ||
+              searchTitle.toLowerCase().includes(c.title.toLowerCase())
+            );
+          }
+          
           if (course) {
             matchedCourses.push({
               ...course.toObject(),
-              recommendationReason: rec.reason,
-              priority: rec.priority
+              recommendationReason: rec.reason || 'Recommended for your learning goals',
+              recommendationScore: rec.priority === 'high' ? 0.9 : rec.priority === 'medium' ? 0.7 : 0.5,
+              priority: rec.priority || 'medium'
             });
           }
         }
       }
-    }
 
-    return successResponse(res, {
-      prompt,
-      recommendations: matchedCourses,
-      gptResponse: recommendations.textResponse,
-      totalRecommendations: recommendations.recommendations?.length || 0,
-      matchedCourses: matchedCourses.length,
-      fallback: recommendations.fallback || false
-    }, 'Course recommendations generated successfully');
+      return successResponse(res, {
+        prompt,
+        recommendations: matchedCourses,
+        gptResponse: recommendations.textResponse,
+        totalRecommendations: recommendations.recommendations?.length || 0,
+        matchedCourses: matchedCourses.length,
+        fallback: recommendations.fallback || false
+      }, 'Course recommendations generated successfully');
+    } catch (error) {
+      console.error('Error in getCourseRecommendations:', error);
+      return errorResponse(res, 'Failed to generate recommendations: ' + error.message, 500);
+    }
   });
 
   // Generate course content using GPT
@@ -86,22 +98,16 @@ class RecommendationController {
 
   // Get chat response
   getChatResponse = asyncHandler(async (req, res) => {
-    const { message, context } = req.body;
+    // Accept both 'message' and 'query' for compatibility
+    const message = req.body.message || req.body.query;
     
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return errorResponse(res, 'Please provide a valid message', 400);
+      return errorResponse(res, 'Please provide a valid message or query', 400);
     }
 
-    // For now, redirect to course recommendations
-    // This can be expanded for general chat functionality
-    if (message.toLowerCase().includes('course') || message.toLowerCase().includes('learn')) {
-      req.body.prompt = message;
-      return this.getCourseRecommendations(req, res);
-    }
-
-    return successResponse(res, {
-      message: "I'm here to help with course recommendations! Try asking me something like 'I want to be a software engineer, what courses should I take?'"
-    }, 'Chat response generated');
+    // Always redirect to course recommendations as this is our main AI feature
+    req.body.prompt = message;
+    return this.getCourseRecommendations(req, res);
   });
   // Get personalized recommendations
   getPersonalizedRecommendations = asyncHandler(async (req, res) => {
@@ -114,8 +120,8 @@ class RecommendationController {
 
     return successResponse(
       res,
-      'Personalized recommendations retrieved successfully',
-      recommendations
+      recommendations,
+      'Personalized recommendations retrieved successfully'
     );
   });
 
@@ -131,8 +137,8 @@ class RecommendationController {
 
     return successResponse(
       res,
-      'Similar courses retrieved successfully',
-      similarCourses
+      similarCourses,
+      'Similar courses retrieved successfully'
     );
   });
 
@@ -146,8 +152,8 @@ class RecommendationController {
 
     return successResponse(
       res,
-      'Trending courses retrieved successfully',
-      trendingCourses
+      trendingCourses,
+      'Trending courses retrieved successfully'
     );
   });
 
@@ -164,8 +170,8 @@ class RecommendationController {
 
     return successResponse(
       res,
-      `Courses in ${category} category retrieved successfully`,
-      courses
+      courses,
+      `Courses in ${category} category retrieved successfully`
     );
   });
 
@@ -180,8 +186,8 @@ class RecommendationController {
 
     return successResponse(
       res,
-      `Learning path for ${skill} retrieved successfully`,
-      learningPath
+      learningPath,
+      `Learning path for ${skill} retrieved successfully`
     );
   });
 
@@ -197,18 +203,27 @@ class RecommendationController {
       );
     }
 
-    const userId = req.user ? req.user._id : null;
-    const recommendations = await recommendationService.getChatRecommendations(
-      query.trim(),
-      userId,
-      parseInt(limit)
-    );
-
-    return successResponse(
-      res,
-      'AI-powered course recommendations generated successfully',
-      recommendations
-    );
+    try {
+      const userId = req.user ? req.user._id : null;
+      const recommendations = await recommendationService.getChatRecommendations(
+        query.trim(),
+        userId,
+        parseInt(limit)
+      );
+      
+      return successResponse(
+        res,
+        recommendations,
+        'AI-powered course recommendations generated successfully'
+      );
+    } catch (error) {
+      console.error('Error generating chat recommendations:', error);
+      return errorResponse(
+        res,
+        'Failed to generate recommendations. Please try again.',
+        HTTP_STATUS.INTERNAL_SERVER_ERROR
+      );
+    }
   });
 
   // Get API usage statistics
@@ -217,8 +232,8 @@ class RecommendationController {
 
     return successResponse(
       res,
-      'API usage statistics retrieved successfully',
-      stats
+      stats,
+      'API usage statistics retrieved successfully'
     );
   });
 
@@ -232,8 +247,8 @@ class RecommendationController {
 
     return successResponse(
       res,
-      'Popular courses retrieved successfully',
-      trendingCourses
+      trendingCourses,
+      'Popular courses retrieved successfully'
     );
   });
 }

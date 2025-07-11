@@ -76,7 +76,7 @@ class CourseController {
   deleteCourse = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const result = await courseService.deleteCourse(id, req.user._id);
+    const result = await courseService.deleteCourse(id, req.user._id, req.user.role);
 
     return successResponse(
       res,
@@ -106,15 +106,19 @@ class CourseController {
     );
   });
 
-  // Publish course
+  // Toggle course publish status
   publishCourse = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const course = await courseService.publishCourse(id, req.user._id);
+    const course = await courseService.publishCourse(id, req.user._id, req.user.role);
+    
+    const message = course.status === 'published' 
+      ? 'Course published successfully' 
+      : 'Course unpublished successfully';
 
     return successResponse(
       res,
-      'Course published successfully',
+      message,
       course
     );
   });
@@ -184,6 +188,47 @@ class CourseController {
       stats
     );
   });
+
+  // Get course statistics for admin dashboard
+  getCourseStatsData = async () => {
+    const { Course } = require('../models');
+    const { COURSE_STATUS } = require('../constants');
+    
+    const totalCourses = await Course.countDocuments();
+    const publishedCourses = await Course.countDocuments({ status: COURSE_STATUS.PUBLISHED });
+    const draftCourses = await Course.countDocuments({ status: COURSE_STATUS.DRAFT });
+    const archivedCourses = await Course.countDocuments({ status: COURSE_STATUS.ARCHIVED });
+    
+    // Get course categories distribution
+    const categories = await Course.aggregate([
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+    
+    // Get most popular courses (by enrollment count)
+    const popularCourses = await Course.find()
+      .sort({ enrollmentCount: -1 })
+      .limit(5)
+      .select('title enrollmentCount')
+      .lean();
+    
+    // Get recent courses (last 30 days)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const recentCourses = await Course.countDocuments({
+      createdAt: { $gte: thirtyDaysAgo }
+    });
+    
+    return {
+      totalCourses,
+      publishedCourses,
+      draftCourses,
+      archivedCourses,
+      categories,
+      popularCourses,
+      recentCourses
+    };
+  };
 
   // Search courses
   searchCourses = asyncHandler(async (req, res) => {

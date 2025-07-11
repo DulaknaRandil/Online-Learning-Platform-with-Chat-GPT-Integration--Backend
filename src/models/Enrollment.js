@@ -79,7 +79,7 @@ const enrollmentSchema = new mongoose.Schema({
   paymentInfo: {
     amount: {
       type: Number,
-      required: true,
+      required: true, // We'll always require an amount (0 for free courses)
       min: [0, 'Payment amount cannot be negative']
     },
     currency: {
@@ -88,7 +88,7 @@ const enrollmentSchema = new mongoose.Schema({
     },
     paymentMethod: {
       type: String,
-      enum: ['credit_card', 'paypal', 'stripe', 'free'],
+      enum: ['credit_card', 'paypal', 'stripe', 'bank_transfer', 'free'],
       default: 'free'
     },
     transactionId: {

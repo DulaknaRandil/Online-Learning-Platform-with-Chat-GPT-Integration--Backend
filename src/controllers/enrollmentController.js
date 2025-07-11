@@ -6,9 +6,9 @@ const { asyncHandler } = require('../middleware');
 class EnrollmentController {
   // Enroll in course
   enrollInCourse = asyncHandler(async (req, res) => {
-    const { courseId } = req.body;
+    const { courseId, paymentDetails } = req.body;
 
-    const enrollment = await enrollmentService.enrollInCourse(req.user._id, courseId);
+    const enrollment = await enrollmentService.enrollInCourse(req.user._id, courseId, paymentDetails);
 
     return successResponse(
       res,
@@ -155,6 +155,59 @@ class EnrollmentController {
       summary
     );
   });
+
+  // Get enrollment statistics for admin dashboard
+  getEnrollmentStatsData = async () => {
+    const { Enrollment } = require('../models');
+    const { ENROLLMENT_STATUS } = require('../constants');
+    
+    const totalEnrollments = await Enrollment.countDocuments();
+    const activeEnrollments = await Enrollment.countDocuments({ status: ENROLLMENT_STATUS.ACTIVE });
+    const completedEnrollments = await Enrollment.countDocuments({ status: ENROLLMENT_STATUS.COMPLETED });
+    const droppedEnrollments = await Enrollment.countDocuments({ status: ENROLLMENT_STATUS.DROPPED });
+    
+    // Get recent enrollments (last 30 days)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const recentEnrollments = await Enrollment.countDocuments({
+      enrollmentDate: { $gte: thirtyDaysAgo }
+    });
+    
+    // Get enrollment trend data (last 7 days)
+    const enrollmentTrend = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+      
+      const count = await Enrollment.countDocuments({
+        enrollmentDate: { $gte: date, $lt: nextDate }
+      });
+      
+      enrollmentTrend.push({
+        date: date.toISOString().split('T')[0],
+        count
+      });
+    }
+    
+    // Get payment method distribution
+    const paymentMethods = await Enrollment.aggregate([
+      { $group: { _id: '$paymentInfo.paymentMethod', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+    
+    return {
+      totalEnrollments,
+      activeEnrollments,
+      completedEnrollments,
+      droppedEnrollments,
+      recentEnrollments,
+      enrollmentTrend,
+      paymentMethods
+    };
+  };
 }
 
 module.exports = new EnrollmentController();

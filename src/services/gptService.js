@@ -100,7 +100,7 @@ If no specific courses match, provide general course categories and skills they 
     const gptResponse = response.data.choices[0].message.content;
     
     try {
-      // Try to parse as JSON
+      // Try to parse as JSON first
       const recommendations = JSON.parse(gptResponse);
       return {
         success: true,
@@ -109,6 +109,23 @@ If no specific courses match, provide general course categories and skills they 
         provider: 'openai'
       };
     } catch (parseError) {
+      // Try to extract JSON array from the text
+      const jsonMatch = gptResponse.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+      if (jsonMatch) {
+        try {
+          const recommendations = JSON.parse(jsonMatch[0]);
+          return {
+            success: true,
+            recommendations,
+            textResponse: gptResponse,
+            rawResponse: gptResponse,
+            provider: 'openai'
+          };
+        } catch (extractError) {
+          // Fall through to text response
+        }
+      }
+      
       // If not valid JSON, return as text
       return {
         success: true,
@@ -167,7 +184,7 @@ If no specific courses match, provide general course categories and skills they 
     const groqResponse = response.data.choices[0].message.content;
     
     try {
-      // Try to parse as JSON
+      // Try to parse as JSON first
       const recommendations = JSON.parse(groqResponse);
       return {
         success: true,
@@ -176,6 +193,23 @@ If no specific courses match, provide general course categories and skills they 
         provider: 'groq'
       };
     } catch (parseError) {
+      // Try to extract JSON array from the text
+      const jsonMatch = groqResponse.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+      if (jsonMatch) {
+        try {
+          const recommendations = JSON.parse(jsonMatch[0]);
+          return {
+            success: true,
+            recommendations,
+            textResponse: groqResponse,
+            rawResponse: groqResponse,
+            provider: 'groq'
+          };
+        } catch (extractError) {
+          // Fall through to text response
+        }
+      }
+      
       // If not valid JSON, return as text
       return {
         success: true,

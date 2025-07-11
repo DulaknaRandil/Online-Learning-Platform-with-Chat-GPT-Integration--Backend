@@ -124,6 +124,17 @@ class UserController {
 
   // Get user statistics
   getUserStats = asyncHandler(async (req, res) => {
+    const stats = await this.getUserStatsData();
+
+    return successResponse(
+      res,
+      'User statistics retrieved successfully',
+      stats
+    );
+  });
+  
+  // Helper method to get user stats data (for reuse in admin dashboard)
+  getUserStatsData = async () => {
     const totalUsers = await User.countDocuments({ isActive: true });
     const studentCount = await User.countDocuments({ role: USER_ROLES.STUDENT, isActive: true });
     const instructorCount = await User.countDocuments({ role: USER_ROLES.INSTRUCTOR, isActive: true });
@@ -136,20 +147,16 @@ class UserController {
       isActive: true
     });
 
-    const stats = {
+    return {
       totalUsers,
       studentCount,
       instructorCount,
       adminCount,
-      recentRegistrations
+      recentRegistrations,
+      activeUsers: totalUsers,
+      inactiveUsers: await User.countDocuments({ isActive: false })
     };
-
-    return successResponse(
-      res,
-      'User statistics retrieved successfully',
-      stats
-    );
-  });
+  };
 
   // Toggle user status (admin only)
   toggleUserStatus = asyncHandler(async (req, res) => {

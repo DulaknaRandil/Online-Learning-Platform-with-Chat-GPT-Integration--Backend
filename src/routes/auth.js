@@ -25,6 +25,10 @@ router.post('/refresh-token',
 // Protected routes
 router.use(auth);
 
+router.get('/me',
+  authController.getCurrentUser
+);
+
 router.get('/profile',
   authController.getProfile
 );

@@ -4,7 +4,7 @@ const logger = require('../utils/logger');
 
 class EnrollmentService {
   // Enroll user in course
-  async enrollInCourse(studentId, courseId) {
+  async enrollInCourse(studentId, courseId, paymentDetails = null) {
     try {
       // Check if course exists and is published
       const course = await Course.findById(courseId);
@@ -31,15 +31,25 @@ class EnrollmentService {
         throw new Error(MESSAGES.ERROR.ALREADY_ENROLLED);
       }
 
+      // Create default payment info based on course price
+      const defaultPaymentInfo = {
+        amount: course.price,
+        currency: 'USD',
+        paymentMethod: course.price === 0 ? 'free' : 'credit_card',
+        transactionId: course.price === 0 ? 
+          `free_${Date.now()}_${Math.floor(Math.random() * 1000)}` : 
+          `txn_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        paidAt: new Date()
+      };
+
+      // Use provided payment details if available, otherwise use defaults
+      const paymentInfo = paymentDetails || defaultPaymentInfo;
+
       // Create enrollment
       const enrollment = new Enrollment({
         student: studentId,
         course: courseId,
-        paymentInfo: {
-          amount: course.price,
-          currency: 'USD',
-          paymentMethod: course.price === 0 ? 'free' : 'stripe'
-        }
+        paymentInfo
       });
 
       await enrollment.save();
@@ -58,7 +68,7 @@ class EnrollmentService {
         { path: 'course', select: 'title instructor price' }
       ]);
 
-      logger.info(`User ${studentId} enrolled in course ${courseId}`);
+      logger.info(`User ${studentId} enrolled in course ${courseId} with payment method ${paymentInfo.paymentMethod}`);
 
       return enrollment;
     } catch (error) {

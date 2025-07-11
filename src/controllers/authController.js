@@ -73,6 +73,18 @@ class AuthController {
       profile
     );
   });
+  
+  // Get current authenticated user (used for token validation)
+  getCurrentUser = asyncHandler(async (req, res) => {
+    // req.user is populated by auth middleware
+    const user = await authService.getProfile(req.user._id);
+    
+    return successResponse(
+      res,
+      'Current user retrieved successfully',
+      { user }
+    );
+  });
 
   // Update user profile
   updateProfile = asyncHandler(async (req, res) => {
