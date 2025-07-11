@@ -89,6 +89,28 @@ class App {
   }
 
   initializeRoutes() {
+    // Root route
+    this.app.get('/', (req, res) => {
+      res.json({
+        success: true,
+        message: 'Online Learning Platform API - Backend Server',
+        version: '1.0.0',
+        status: 'Running',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+          health: '/api/health',
+          documentation: '/api',
+          auth: '/api/auth',
+          courses: '/api/courses',
+          enrollments: '/api/enrollments',
+          recommendations: '/api/recommendations',
+          users: '/api/users',
+          admin: '/api/admin',
+          payment: '/api/payment'
+        }
+      });
+    });
+
     // API routes
     this.app.use('/api', routes);
 
